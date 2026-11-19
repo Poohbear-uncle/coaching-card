@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>사회구성주의 인터랙션 코칭 캔버스</title>
   
   <!-- Pretendard Font -->
@@ -40,6 +40,7 @@
       user-select: none;
       -webkit-user-select: none;
       overflow: hidden;
+      touch-action: manipulation;
     }
     
     /* 3D Card Flip Styles */
@@ -56,6 +57,21 @@
     }
     .rotate-y-180 {
       transform: rotateY(180deg);
+    }
+
+    /* html2canvas export fix: Clean 2D rendering without 3D reverse text */
+    .exporting-canvas .card-exporting.is-not-flipped .card-face-back {
+      display: none !important;
+    }
+    .exporting-canvas .card-exporting.is-flipped .card-face-front {
+      display: none !important;
+    }
+    .exporting-canvas .card-exporting.is-flipped .card-face-back {
+      display: flex !important;
+      transform: none !important;
+    }
+    .exporting-canvas .card-exporting .card-3d-inner {
+      transform: none !important;
     }
 
     /* Custom Scrollbar */
@@ -109,79 +125,136 @@
 <body class="bg-[#F8FAFC] text-slate-800 h-screen w-screen flex flex-col antialiased select-none">
 
   <!-- ================= TOP HEADER CONTROL BAR ================= -->
-  <header class="bg-white border-b border-slate-200 shadow-sm px-4 py-2.5 flex items-center justify-between z-30 shrink-0">
-    <div class="flex items-center space-x-3">
-      <div class="flex items-center space-x-2">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-          C
+  <header class="bg-white border-b border-slate-200 shadow-sm z-30 shrink-0">
+    <!-- Desktop Header (md and up) -->
+    <div class="hidden md:flex px-4 py-2.5 items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            C
+          </div>
+          <div>
+            <h1 class="font-bold text-base text-slate-900 leading-tight">사회구성주의 코칭 캔버스</h1>
+            <p class="text-[11px] text-slate-500">Social Constructionism & Field Theory Interactive Canvas</p>
+          </div>
         </div>
-        <div>
-          <h1 class="font-bold text-base text-slate-900 leading-tight">사회구성주의 코칭 캔버스</h1>
-          <p class="text-[11px] text-slate-500">Social Constructionism & Field Theory Interactive Canvas</p>
+
+        <!-- Room & Connection Status -->
+        <div class="flex items-center space-x-2 pl-3 border-l border-slate-200">
+          <div id="statusBadge" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span id="statusDot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            <span id="statusText">룸 준비 중...</span>
+          </div>
+          
+          <div class="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200 text-xs">
+            <span class="text-slate-500 px-2 font-mono" id="roomIdDisplay">ROOM: ----</span>
+            <button id="copyInviteBtn" onclick="copyInviteLink()" class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-2 py-0.5 rounded shadow-xs border border-slate-200 flex items-center space-x-1 transition">
+              <span>초대 링크 복사</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Room & Connection Status -->
-      <div class="flex items-center space-x-2 pl-3 border-l border-slate-200">
-        <div id="statusBadge" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-          <span id="statusDot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-          <span id="statusText">룸 준비 중...</span>
+      <!-- Center: 4 Coaching Modes -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 space-x-1">
+        <button onclick="changeMode(1)" id="modeBtn1" class="mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 bg-white text-blue-600 shadow-xs">
+          <span>🌐 [1] 장(Field) 등고선</span>
+        </button>
+        <button onclick="changeMode(2)" id="modeBtn2" class="mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center space-x-1.5">
+          <span>💎 [2] 4대 자본 매트릭스</span>
+        </button>
+        <button onclick="changeMode(3)" id="modeBtn3" class="mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center space-x-1.5">
+          <span>🎨 [3] 4색 목소리 소팅</span>
+        </button>
+        <button onclick="changeMode(4)" id="modeBtn4" class="mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center space-x-1.5">
+          <span>⚡ [4] 힘장 액션 플래너</span>
+        </button>
+      </div>
+
+      <!-- Right: Tools & Export -->
+      <div class="flex items-center space-x-2">
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 space-x-1">
+          <button id="toolSelect" onclick="setTool('select')" class="tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-800 shadow-xs flex items-center space-x-1" title="선택 및 카드 이동">
+            <span>🖐️ 선택/이동</span>
+          </button>
+          <button id="toolLine" onclick="setTool('line')" class="tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-1" title="영향력/환전 화살표 긋기">
+            <span>↗️ 연결선</span>
+          </button>
+          <button id="btnLineStyle" onclick="cycleLineStyle()" class="px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 border border-slate-200 bg-white" title="연결선 스타일: 〰️곡선 / 🔀절곡선(장애물 회피) / 📏직선">
+            <span id="lineStyleLabel">〰️ 곡선</span>
+          </button>
+          <button id="toolNote" onclick="setTool('note')" class="tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-1" title="포스트잇 메모 작성">
+            <span>📝 포스트잇</span>
+          </button>
+          <button onclick="clearCurrentCanvas()" class="px-2 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 transition" title="캔버스 요소 비우기">
+            <span>🗑️ 비우기</span>
+          </button>
         </div>
-        
-        <div class="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200 text-xs">
-          <span class="text-slate-500 px-2 font-mono" id="roomIdDisplay">ROOM: ----</span>
-          <button id="copyInviteBtn" onclick="copyInviteLink()" class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-2 py-0.5 rounded shadow-xs border border-slate-200 flex items-center space-x-1 transition">
-            <span>초대 링크 복사</span>
+
+        <button onclick="exportCanvasToPng()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-xs px-3 py-2 rounded-xl shadow-sm flex items-center space-x-1.5 transition">
+          <span>📷 리포트 저장 (PNG)</span>
+        </button>
+
+        <a href="./manual.html" target="_blank" class="bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs px-2.5 py-2 rounded-xl shadow-xs border border-slate-200 flex items-center space-x-1 transition" title="코치용 퍼실리테이션 매뉴얼 열기">
+          <span>📖 매뉴얼</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Mobile Header (under md: 768px) -->
+    <div class="flex md:hidden flex-col px-3 py-2 space-y-1.5 bg-white">
+      <!-- Top mini bar -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-1.5">
+          <div class="w-6 h-6 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
+            C
+          </div>
+          <span class="font-bold text-xs text-slate-900">코칭 캔버스</span>
+          <div id="mobileStatusBadge" class="flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
+            <span id="mobileStatusDot" class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+            <span id="mobileStatusText">대기 중</span>
+          </div>
+        </div>
+
+        <!-- Mode Select Dropdown -->
+        <div class="flex items-center space-x-1">
+          <select id="mobileModeSelect" onchange="changeMode(Number(this.value))" 
+                  class="text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2 py-1 focus:outline-none">
+            <option value="1">🌐 1. 장 등고선</option>
+            <option value="2">💎 2. 4대 자본</option>
+            <option value="3">🎨 3. 4색 목소리</option>
+            <option value="4">⚡ 4. 힘장 플래너</option>
+          </select>
+          <button onclick="exportCanvasToPng()" class="p-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs" title="PNG 저장">
+            📷
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Center: 4 Coaching Modes -->
-    <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 space-x-1">
-      <button onclick="changeMode(1)" id="modeBtn1" class="mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 bg-white text-blue-600 shadow-xs">
-        <span>🌐 [1] 장(Field) 등고선</span>
-      </button>
-      <button onclick="changeMode(2)" id="modeBtn2" class="mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center space-x-1.5">
-        <span>💎 [2] 4대 자본 매트릭스</span>
-      </button>
-      <button onclick="changeMode(3)" id="modeBtn3" class="mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center space-x-1.5">
-        <span>🎨 [3] 4색 목소리 소팅</span>
-      </button>
-      <button onclick="changeMode(4)" id="modeBtn4" class="mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center space-x-1.5">
-        <span>⚡ [4] 힘장 액션 플래너</span>
-      </button>
-    </div>
-
-    <!-- Right: Tools & Export -->
-    <div class="flex items-center space-x-2">
-      <!-- Tool Palette -->
-      <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 space-x-1">
-        <button id="toolSelect" onclick="setTool('select')" class="tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-800 shadow-xs flex items-center space-x-1" title="선택 및 카드 이동">
-          <span>🖐️ 선택/이동</span>
-        </button>
-        <button id="toolLine" onclick="setTool('line')" class="tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-1" title="영향력/환전 화살표 긋기">
-          <span>↗️ 연결선</span>
-        </button>
-        <button id="toolNote" onclick="setTool('note')" class="tool-btn px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center space-x-1" title="포스트잇 메모 작성">
-          <span>📝 포스트잇</span>
-        </button>
-        <button onclick="clearCurrentCanvas()" class="px-2 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 transition" title="캔버스 요소 비우기">
-          <span>🗑️ 비우기</span>
-        </button>
+      <!-- Bottom mini tools bar -->
+      <div class="flex items-center justify-between bg-slate-100 p-1 rounded-lg text-[10px]">
+        <div class="flex items-center space-x-1">
+          <button id="mobileToolSelect" onclick="setTool('select')" class="px-2 py-0.5 rounded bg-white text-slate-900 shadow-2xs font-semibold">🖐️ 이동</button>
+          <button id="mobileToolLine" onclick="setTool('line')" class="px-2 py-0.5 rounded text-slate-600 hover:text-slate-900">↗️ 선</button>
+          <button id="mobileLineStyle" onclick="cycleLineStyle()" class="px-1.5 py-0.5 rounded text-[11px] text-slate-500 border border-slate-200 bg-white" title="선 스타일">
+            <span id="mobileLineStyleLabel">〰️</span>
+          </button>
+          <button id="mobileToolNote" onclick="setTool('note')" class="px-2 py-0.5 rounded text-slate-600 hover:text-slate-900">📝 메모</button>
+          <button onclick="clearCurrentCanvas()" class="px-1.5 py-0.5 rounded text-rose-600">🗑️</button>
+        </div>
+        <div class="flex items-center space-x-1">
+          <button onclick="toggleDrawer()" class="px-2 py-0.5 bg-blue-600 text-white rounded font-bold">🎴 카드덱</button>
+          <a href="./manual.html" target="_blank" class="px-1.5 py-0.5 text-slate-500">📖</a>
+        </div>
       </div>
-
-      <!-- Export PNG Button -->
-      <button onclick="exportCanvasToPng()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium text-xs px-3 py-2 rounded-xl shadow-sm flex items-center space-x-1.5 transition">
-        <span>📷 리포트 저장 (PNG)</span>
-      </button>
-
-      <!-- Coach Manual Link -->
-      <a href="./manual.html" target="_blank" class="bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs px-2.5 py-2 rounded-xl shadow-xs border border-slate-200 flex items-center space-x-1 transition" title="코치용 퍼실리테이션 매뉴얼 열기">
-        <span>📖 매뉴얼</span>
-      </a>
     </div>
   </header>
+
+  <!-- Mobile Orientation Floating Tip -->
+  <div id="orientationTip" class="fixed top-14 left-1/2 -translate-x-1/2 bg-slate-900/80 text-white text-[10px] px-3 py-1 rounded-full shadow-lg z-50 flex items-center space-x-1.5 md:hidden transition pointer-events-auto">
+    <span>💡 스마트폰을 가로로 돌리면 더 넓게 보입니다</span>
+    <button onclick="this.parentElement.remove()" class="text-slate-300 hover:text-white font-bold ml-1 px-1">&times;</button>
+  </div>
 
   <!-- ================= MAIN SHARED CANVAS ================= -->
   <main class="relative flex-1 bg-[#F8FAFC] overflow-hidden" id="canvasContainer"
@@ -232,37 +305,37 @@
   <!-- ================= BOTTOM CARD DECK DRAWER ================= -->
   <div id="deckDrawer" class="bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-xl transition-all duration-300 z-30 flex flex-col shrink-0" style="height: 220px;">
     <!-- Drawer Toggle Header -->
-    <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
-      <div class="flex items-center space-x-3">
-        <button onclick="toggleDrawer()" class="flex items-center space-x-1.5 text-xs font-bold text-slate-700 hover:text-blue-600 transition">
+    <div class="px-3 sm:px-4 py-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+      <div class="flex items-center space-x-2 sm:space-x-3 overflow-x-auto">
+        <button onclick="toggleDrawer()" class="flex items-center space-x-1 text-xs font-bold text-slate-700 hover:text-blue-600 transition shrink-0">
           <span id="drawerToggleIcon">▼</span>
-          <span>한국어 성찰 코칭 카드 덱</span>
-          <span id="deckCardCountBadge" class="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full ml-1">60장</span>
+          <span class="hidden sm:inline">한국어 성찰 코칭 카드 덱</span>
+          <span class="sm:hidden">카드덱</span>
+          <span id="deckCardCountBadge" class="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.2 rounded-full ml-1">60장</span>
         </button>
 
         <!-- View Mode: 1-Row Slide vs 2-Row Grid -->
-        <button id="deckViewModeBtn" onclick="toggleDeckViewMode()" class="text-[11px] font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-2xs hover:bg-slate-50 transition flex items-center space-x-1">
-          <span>⊞ 2줄로 넓게 보기</span>
+        <button id="deckViewModeBtn" onclick="toggleDeckViewMode()" class="text-[10px] sm:text-[11px] font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-2xs hover:bg-slate-50 transition shrink-0">
+          <span>⊞ 2줄 보기</span>
         </button>
 
         <!-- Theme Filter Pills -->
-        <div class="flex items-center space-x-1 pl-3 border-l border-slate-200">
-          <button onclick="filterCards(0)" class="theme-filter-pill px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">전체 (60)</button>
-          <button onclick="filterCards(1)" class="theme-filter-pill px-2.5 py-0.5 rounded-full text-[11px] font-medium text-slate-600 hover:bg-slate-100">1. 관계의 그물망</button>
-          <button onclick="filterCards(2)" class="theme-filter-pill px-2.5 py-0.5 rounded-full text-[11px] font-medium text-slate-600 hover:bg-slate-100">2. 내면화된 기준</button>
-          <button onclick="filterCards(3)" class="theme-filter-pill px-2.5 py-0.5 rounded-full text-[11px] font-medium text-slate-600 hover:bg-slate-100">3. 긴장 완화</button>
-          <button onclick="filterCards(4)" class="theme-filter-pill px-2.5 py-0.5 rounded-full text-[11px] font-medium text-slate-600 hover:bg-slate-100">4. 문제 거리두기</button>
-          <button onclick="filterCards(5)" class="theme-filter-pill px-2.5 py-0.5 rounded-full text-[11px] font-medium text-slate-600 hover:bg-slate-100">5. 작은 실천</button>
+        <div class="flex items-center space-x-1 pl-2 border-l border-slate-200 overflow-x-auto shrink-0">
+          <button onclick="filterCards(0)" class="theme-filter-pill px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200 shrink-0">전체</button>
+          <button onclick="filterCards(1)" class="theme-filter-pill px-2 py-0.5 rounded-full text-[10px] font-medium text-slate-600 hover:bg-slate-100 shrink-0">1. 관계</button>
+          <button onclick="filterCards(2)" class="theme-filter-pill px-2 py-0.5 rounded-full text-[10px] font-medium text-slate-600 hover:bg-slate-100 shrink-0">2. 기준</button>
+          <button onclick="filterCards(3)" class="theme-filter-pill px-2 py-0.5 rounded-full text-[10px] font-medium text-slate-600 hover:bg-slate-100 shrink-0">3. 긴장</button>
+          <button onclick="filterCards(4)" class="theme-filter-pill px-2 py-0.5 rounded-full text-[10px] font-medium text-slate-600 hover:bg-slate-100 shrink-0">4. 거리</button>
+          <button onclick="filterCards(5)" class="theme-filter-pill px-2 py-0.5 rounded-full text-[10px] font-medium text-slate-600 hover:bg-slate-100 shrink-0">5. 실천</button>
         </div>
       </div>
 
       <!-- Search Box & Guide -->
-      <div class="flex items-center space-x-3">
-        <div class="text-[11px] text-slate-400 hidden sm:block">💡 마우스 휠 또는 ◀ ▶ 버튼으로 좌우 스크롤 / 드래그하여 배치</div>
+      <div class="flex items-center space-x-2 shrink-0">
         <div class="relative">
-          <input type="text" id="cardSearchInput" oninput="handleCardSearch()" placeholder="질문/키워드 검색..." 
-                 class="w-44 text-xs pl-7 pr-2.5 py-1 rounded-lg bg-white border border-slate-200 focus:outline-none focus:border-blue-500 transition"/>
-          <span class="absolute left-2 top-1.5 text-xs text-slate-400">🔍</span>
+          <input type="text" id="cardSearchInput" oninput="handleCardSearch()" placeholder="검색..." 
+                 class="w-24 sm:w-36 text-xs pl-6 pr-2 py-1 rounded-lg bg-white border border-slate-200 focus:outline-none focus:border-blue-500 transition"/>
+          <span class="absolute left-1.5 top-1.5 text-xs text-slate-400">🔍</span>
         </div>
       </div>
     </div>
@@ -270,27 +343,77 @@
     <!-- Cards Scroll Strip with Floating Left/Right Scroll Buttons -->
     <div class="relative flex-1 flex items-center overflow-hidden">
       <!-- Left Scroll Button -->
-      <button onclick="scrollDeck(-450)" 
-              class="absolute left-2 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-white/95 text-slate-700 hover:text-blue-600 hover:bg-white shadow-lg border border-slate-200 flex items-center justify-center font-bold text-sm transition transform hover:scale-105 active:scale-95"
+      <button onclick="scrollDeck(-350)" 
+              class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 text-slate-700 hover:text-blue-600 hover:bg-white shadow-lg border border-slate-200 flex items-center justify-center font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95"
               title="이전 카드 보기 (좌측 스크롤)">
         ◀
       </button>
 
       <!-- Scrollable Container -->
-      <div id="deckCardsContainer" class="flex-1 h-full overflow-x-auto overflow-y-hidden px-14 py-3 flex space-x-3 items-center scroll-smooth">
+      <div id="deckCardsContainer" class="flex-1 h-full overflow-x-auto overflow-y-hidden px-10 sm:px-14 py-2 sm:py-3 flex space-x-2.5 sm:space-x-3 items-center scroll-smooth">
         <!-- 60 Cards loaded here -->
       </div>
 
       <!-- Right Scroll Button -->
-      <button onclick="scrollDeck(450)" 
-              class="absolute right-2 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-full bg-white/95 text-slate-700 hover:text-blue-600 hover:bg-white shadow-lg border border-slate-200 flex items-center justify-center font-bold text-sm transition transform hover:scale-105 active:scale-95"
+      <button onclick="scrollDeck(350)" 
+              class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 text-slate-700 hover:text-blue-600 hover:bg-white shadow-lg border border-slate-200 flex items-center justify-center font-bold text-xs sm:text-sm transition transform hover:scale-105 active:scale-95"
               title="다음 카드 보기 (우측 스크롤)">
         ▶
       </button>
     </div>
   </div>
 
-  <!-- ================= MODAL: NARRATIVE VOICE RECONSTRUCTION (MODE 3) ================= -->
+  <!-- ================= MODAL: LARGE CARD PREVIEW & FLIP ================= -->
+  <div id="cardPreviewModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center hidden z-50 p-4" onclick="if(event.target === this) closeCardPreviewModal()">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-sm sm:max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-5 sm:p-6 flex flex-col items-center">
+      <div class="w-full flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+        <div class="flex items-center space-x-2">
+          <span id="previewModalThemeBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700">관계와 연결</span>
+          <span id="previewModalNumberBadge" class="font-mono text-xs font-bold text-slate-400">#01</span>
+        </div>
+        <button onclick="closeCardPreviewModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition">&times;</button>
+      </div>
+
+      <!-- Large 3D Flippable Card -->
+      <div class="relative w-64 h-44 sm:w-80 sm:h-52 perspective-1000 cursor-pointer my-2 select-none" onclick="togglePreviewModalFlip()">
+        <div id="previewModalCardInner" class="w-full h-full transform-style-3d transition-transform duration-500">
+          <!-- Large Front (Photo) -->
+          <div class="absolute inset-0 backface-hidden w-full h-full rounded-2xl overflow-hidden shadow-xl border-2 border-slate-200 bg-white">
+            <img id="previewModalImg" src="" alt="Large Card" class="w-full h-full object-cover" />
+            <div class="absolute bottom-2 right-2 bg-slate-900/75 backdrop-blur-xs text-white text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center space-x-1">
+              <span>🔄 탭하여 질문 보기</span>
+            </div>
+          </div>
+          <!-- Large Back (Question) -->
+          <div class="absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-2xl p-5 shadow-xl border-2 border-blue-300 bg-gradient-to-br from-white to-blue-50/60 flex flex-col justify-between text-center">
+            <div class="flex items-center justify-between text-[10px] text-blue-600 font-bold">
+              <span>질문 성찰</span>
+              <span id="previewModalBackNum" class="font-mono">#01</span>
+            </div>
+            <p id="previewModalQuestion" class="text-sm sm:text-base font-bold text-slate-800 leading-relaxed my-auto px-2">
+              질문 내용이 여기에 표시됩니다.
+            </p>
+            <div class="text-[10px] text-blue-500 font-semibold flex items-center justify-center space-x-1">
+              <span>🔄 탭하여 사진 보기</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-slate-400 mt-2">카드를 클릭(탭)하면 앞면 사진과 뒷면 질문이 회전합니다.</p>
+
+      <div class="w-full mt-4 pt-3 border-t border-slate-100 flex items-center space-x-3">
+        <button onclick="closeCardPreviewModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium text-xs hover:bg-slate-50 transition">
+          닫기
+        </button>
+        <button id="previewModalPlaceBtn" onclick="placePreviewCardToCanvas()" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-1">
+          <span>✨ 캔버스에 배치하기</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+    <!-- ================= MODAL: NARRATIVE VOICE RECONSTRUCTION (MODE 3) ================= -->
   <div id="voiceModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center hidden z-50 p-4">
     <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between" id="voiceModalHeader">
@@ -301,7 +424,7 @@
         <button onclick="closeVoiceModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
       </div>
 
-      <div class="p-6 space-y-4 text-xs">
+      <div class="p-4 sm:p-6 space-y-3 sm:space-y-4 text-xs">
         <div>
           <label class="block font-semibold text-slate-700 mb-1">1. 원래 나를 재촉하거나 채찍질하던 목소리/규칙</label>
           <input type="text" id="voiceInputOriginal" placeholder="예: '쉬면 도태된다', '항상 완벽해야만 해'" 
@@ -887,7 +1010,11 @@
       notesOnCanvas: {}, // noteId -> { id, xPct, yPct, text, color }
       linesOnCanvas: {}, // lineId -> { id, x1Pct, y1Pct, x2Pct, y2Pct, label, color }
       lineStartPoint: null,
-      drawerOpen: true,
+      lineStyle: 'curved', // 'curved' (smooth bezier), 'orthogonal' (smart route around cards), 'straight'
+      previewCardId: null,
+      previewModalFlipped: false,
+      drawerOpen: window.innerWidth > 768, // auto-collapse on mobile!
+      deckViewMode: 'single',
       currentFilterTheme: 0
     };
 
@@ -896,6 +1023,28 @@
       initDeckDrawer();
       renderCanvasBackground(state.currentMode);
       initPeerJS();
+
+      // Mobile drawer initial height
+      if (window.innerWidth <= 768) {
+        document.getElementById('deckDrawer').style.height = '40px';
+        document.getElementById('drawerToggleIcon').innerText = '▲';
+        setTimeout(() => {
+          const tip = document.getElementById('orientationTip');
+          if (tip) tip.style.display = 'none';
+        }, 5000);
+      }
+
+      // Listen to resize and orientation change to re-render background dynamically!
+      window.addEventListener('resize', () => {
+        renderCanvasBackground(state.currentMode);
+        renderAllLines();
+      });
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+          renderCanvasBackground(state.currentMode);
+          renderAllLines();
+        }, 200);
+      });
 
       // Keyboard shortcuts
       window.addEventListener('keydown', (e) => {
@@ -915,7 +1064,8 @@
         state.isHost = false;
         state.roomId = roomParam;
         updateStatusBadge('connecting', '코치 룸에 연결 중...');
-        document.getElementById('roomIdDisplay').innerText = `ROOM: ${state.roomId} (고객)`;
+        const roomStr = `ROOM: ${state.roomId} (고객)`;
+        document.getElementById('roomIdDisplay').innerText = roomStr;
 
         state.peer = new Peer();
         state.peer.on('open', (id) => {
@@ -1013,6 +1163,15 @@
           renderCanvasBackground(payload.mode);
           break;
 
+        case 'LINE_STYLE':
+          state.lineStyle = payload.lineStyle;
+          const lbl = document.getElementById('lineStyleLabel');
+          if (lbl) lbl.innerText = { curved: '〰️ 곡선', orthogonal: '🔀 절곡선(회피)', straight: '📏 직선' }[state.lineStyle] || '〰️ 곡선';
+          const mlbl = document.getElementById('mobileLineStyleLabel');
+          if (mlbl) mlbl.innerText = { curved: '〰️', orthogonal: '🔀', straight: '📏' }[state.lineStyle] || '〰️';
+          renderAllLines();
+          break;
+
         case 'CARD_ADD':
         case 'CARD_UPDATE':
           state.cardsOnCanvas[payload.instanceId] = payload.data;
@@ -1066,16 +1225,28 @@
       const dot = document.getElementById('statusDot');
       const label = document.getElementById('statusText');
 
-      label.innerText = text;
+      const mBadge = document.getElementById('mobileStatusBadge');
+      const mDot = document.getElementById('mobileStatusDot');
+      const mLabel = document.getElementById('mobileStatusText');
+
+      if (label) label.innerText = text;
+      if (mLabel) mLabel.innerText = text.includes('연결됨') ? '연결됨' : '대기 중';
+
       if (status === 'connected') {
-        badge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
-        dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+        if (badge) badge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+        if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+        if (mBadge) mBadge.className = "flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200";
+        if (mDot) mDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
       } else if (status === 'connecting') {
-        badge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200";
-        dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+        if (badge) badge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200";
+        if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+        if (mBadge) mBadge.className = "flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[10px] bg-blue-50 text-blue-700 border border-blue-200";
+        if (mDot) mDot.className = "w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse";
       } else {
-        badge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200";
-        dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+        if (badge) badge.className = "flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200";
+        if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+        if (mBadge) mBadge.className = "flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-50 text-amber-700 border border-amber-200";
+        if (mDot) mDot.className = "w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse";
       }
     }
 
@@ -1101,239 +1272,315 @@
     }
 
     function updateModeButtonsUI(modeNum) {
+      // Update Desktop Buttons
       for (let i = 1; i <= 4; i++) {
         const btn = document.getElementById(`modeBtn${i}`);
-        if (i === modeNum) {
-          btn.className = "mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 bg-white text-blue-600 shadow-xs";
-        } else {
-          btn.className = "mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center space-x-1.5";
+        if (btn) {
+          if (i === modeNum) {
+            btn.className = "mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 bg-white text-blue-600 shadow-xs";
+          } else {
+            btn.className = "mode-tab px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center space-x-1.5";
+          }
         }
+      }
+      // Update Mobile Select Dropdown
+      const mobileSelect = document.getElementById('mobileModeSelect');
+      if (mobileSelect) {
+        mobileSelect.value = String(modeNum);
       }
     }
 
     function renderCanvasBackground(mode) {
       const bg = document.getElementById('canvasBackground');
       bg.innerHTML = '';
+      const isMobile = window.innerWidth < 768;
 
       if (mode === 1) {
         // MODE 1: Field Topography (3 Concentric Circles)
         bg.innerHTML = `
-          <div class="relative w-full h-full flex items-center justify-center p-6">
-            <!-- Outer Circle: 주변부 / 보호 / 경계 -->
-            <div class="absolute w-[86%] h-[86%] rounded-full border-2 border-dashed border-slate-300 bg-slate-100/40 flex items-start justify-center pt-3">
-              <span class="text-xs font-bold text-slate-400 bg-white/90 px-3 py-0.5 rounded-full border border-slate-200 shadow-xs">
-                바깥 주변부 (주목받지 않는 자리 · 고유한 가치와 침묵의 보호 영역)
+          <div class="relative w-full h-full flex items-center justify-center p-2 sm:p-6">
+            <!-- Outer Circle -->
+            <div class="absolute w-[94%] h-[94%] sm:w-[86%] sm:h-[86%] rounded-full border-2 border-dashed border-slate-300 bg-slate-100/40 flex items-start justify-center pt-2 sm:pt-3">
+              <span class="text-[9px] sm:text-xs font-bold text-slate-500 bg-white/90 px-2 sm:px-3 py-0.5 rounded-full border border-slate-200 shadow-xs text-center max-w-[90%]">
+                ${isMobile ? '바깥 주변부 (가치/침묵 보호)' : '바깥 주변부 (주목받지 않는 자리 · 고유한 가치와 침묵의 보호 영역)'}
               </span>
             </div>
-            <!-- Middle Circle: 중간 실무 / 게임의 룰 -->
-            <div class="absolute w-[58%] h-[58%] rounded-full border-2 border-dashed border-blue-200 bg-blue-50/30 flex items-start justify-center pt-3">
-              <span class="text-xs font-bold text-blue-500 bg-white/90 px-3 py-0.5 rounded-full border border-blue-200 shadow-xs">
-                중간 실무층 (게임의 공식·비공식 규칙을 추종하며 에너지를 쓰는 영역)
+            <!-- Middle Circle -->
+            <div class="absolute w-[66%] h-[66%] sm:w-[58%] sm:h-[58%] rounded-full border-2 border-dashed border-blue-200 bg-blue-50/30 flex items-start justify-center pt-2 sm:pt-3">
+              <span class="text-[9px] sm:text-xs font-bold text-blue-600 bg-white/90 px-2 sm:px-3 py-0.5 rounded-full border border-blue-200 shadow-xs text-center max-w-[85%]">
+                ${isMobile ? '중간 실무층 (게임 룰 추종)' : '중간 실무층 (게임의 공식·비공식 규칙을 추종하며 에너지를 쓰는 영역)'}
               </span>
             </div>
-            <!-- Center Circle: 중심 권력 / 성공의 표본 -->
-            <div class="absolute w-[30%] h-[30%] rounded-full border-2 border-indigo-300 bg-indigo-50/40 flex items-center justify-center text-center p-4">
-              <span class="text-xs font-bold text-indigo-700 bg-white/90 px-3 py-1 rounded-full border border-indigo-200 shadow-xs">
-                중심부 (의사결정 권력층 · 인정과 평가의 표준)
+            <!-- Center Circle -->
+            <div class="absolute w-[38%] h-[38%] sm:w-[30%] sm:h-[30%] rounded-full border-2 border-indigo-300 bg-indigo-50/40 flex items-center justify-center text-center p-1 sm:p-4">
+              <span class="text-[9px] sm:text-xs font-bold text-indigo-700 bg-white/90 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-indigo-200 shadow-xs text-center">
+                ${isMobile ? '중심부 (권력·표준)' : '중심부 (의사결정 권력층 · 인정과 평가의 표준)'}
               </span>
             </div>
           </div>
         `;
       } else if (mode === 2) {
-        // MODE 2: Bourdieu 4 Capitals + Invaluable Value (5 Dropzones)
-        bg.innerHTML = `
-          <div class="w-full h-full p-6 grid grid-cols-5 gap-4">
-            <!-- 1. 경제자본 -->
-            <div class="rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/30 p-3 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center space-x-1.5 text-emerald-800 font-bold text-xs mb-1">
-                  <span>💰 경제자본</span>
-                </div>
-                <p class="text-[10px] text-emerald-600">재정적 여력, 보유 자산, 선택의 여지를 주는 독립적 자원</p>
+        // MODE 2: 5 Capitals
+        if (isMobile) {
+          bg.innerHTML = `
+            <div class="w-full h-full p-2 grid grid-cols-2 gap-2 overflow-y-auto">
+              <div class="rounded-xl border border-emerald-300 bg-emerald-50/40 p-2 flex flex-col justify-between">
+                <span class="text-emerald-800 font-bold text-[10px]">💰 경제자본</span>
+                <span class="text-[8px] text-emerald-500">재정적 독립/자산</span>
               </div>
-              <div class="text-[10px] font-medium text-emerald-500 text-center py-1 bg-white/60 rounded-lg border border-emerald-100">슬롯 1</div>
-            </div>
-
-            <!-- 2. 문화자본 -->
-            <div class="rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/30 p-3 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center space-x-1.5 text-blue-800 font-bold text-xs mb-1">
-                  <span>📚 문화자본</span>
-                </div>
-                <p class="text-[10px] text-blue-600">전문 지식, 자격, 글·말 감각, 오랜 시간 배우고 익힌 숙련도</p>
+              <div class="rounded-xl border border-blue-300 bg-blue-50/40 p-2 flex flex-col justify-between">
+                <span class="text-blue-800 font-bold text-[10px]">📚 문화자본</span>
+                <span class="text-[8px] text-blue-500">지식/취향/전문성</span>
               </div>
-              <div class="text-[10px] font-medium text-blue-500 text-center py-1 bg-white/60 rounded-lg border border-blue-100">슬롯 2</div>
-            </div>
-
-            <!-- 3. 사회자본 -->
-            <div class="rounded-2xl border-2 border-dashed border-purple-300 bg-purple-50/30 p-3 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center space-x-1.5 text-purple-800 font-bold text-xs mb-1">
-                  <span>🤝 사회자본</span>
-                </div>
-                <p class="text-[10px] text-purple-600">신뢰하는 동료, 멘토, 네트워크, 넘어질 때 손잡아 줄 관계</p>
+              <div class="rounded-xl border border-purple-300 bg-purple-50/40 p-2 flex flex-col justify-between">
+                <span class="text-purple-800 font-bold text-[10px]">🤝 사회자본</span>
+                <span class="text-[8px] text-purple-500">신뢰 동료/네트워크</span>
               </div>
-              <div class="text-[10px] font-medium text-purple-500 text-center py-1 bg-white/60 rounded-lg border border-purple-100">슬롯 3</div>
-            </div>
-
-            <!-- 4. 상징자본 -->
-            <div class="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/30 p-3 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center space-x-1.5 text-amber-800 font-bold text-xs mb-1">
-                  <span>🏅 상징자본</span>
-                </div>
-                <p class="text-[10px] text-amber-600">공식 평판, 직함, 이전 성공 이력, 타인이 인정해 주는 권위</p>
+              <div class="rounded-xl border border-amber-300 bg-amber-50/40 p-2 flex flex-col justify-between">
+                <span class="text-amber-800 font-bold text-[10px]">🏅 상징자본</span>
+                <span class="text-[8px] text-amber-500">공식 평판/자부심</span>
               </div>
-              <div class="text-[10px] font-medium text-amber-500 text-center py-1 bg-white/60 rounded-lg border border-amber-100">슬롯 4</div>
-            </div>
-
-            <!-- 5. 비환전 가치 -->
-            <div class="rounded-2xl border-2 border-dashed border-rose-300 bg-rose-50/30 p-3 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center space-x-1.5 text-rose-800 font-bold text-xs mb-1">
-                  <span>🌿 비환전 소중한 가치</span>
-                </div>
-                <p class="text-[10px] text-rose-600">자본화되지 않아도 소중한 쉼, 돌봄, 우정, 취미, 생명력</p>
+              <div class="col-span-2 rounded-xl border border-rose-300 bg-rose-50/40 p-2 flex items-center justify-between">
+                <span class="text-rose-800 font-bold text-[10px]">🌿 비환전 소중한 가치</span>
+                <span class="text-[8px] text-rose-500">돌봄, 쉼, 우정, 생명력</span>
               </div>
-              <div class="text-[10px] font-medium text-rose-500 text-center py-1 bg-white/60 rounded-lg border border-rose-100">슬롯 5</div>
             </div>
-          </div>
-        `;
+          `;
+        } else {
+          bg.innerHTML = `
+            <div class="w-full h-full p-6 grid grid-cols-5 gap-4">
+              <div class="rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/30 p-3 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center space-x-1.5 text-emerald-800 font-bold text-xs mb-1">
+                    <span>💰 경제자본</span>
+                  </div>
+                  <p class="text-[10px] text-emerald-600">재정적 여력, 보유 자산, 선택의 여지를 주는 독립적 자원</p>
+                </div>
+                <div class="text-[10px] font-medium text-emerald-500 text-center py-1 bg-white/60 rounded-lg border border-emerald-100">슬롯 1</div>
+              </div>
+              <div class="rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/30 p-3 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center space-x-1.5 text-blue-800 font-bold text-xs mb-1">
+                    <span>📚 문화자본</span>
+                  </div>
+                  <p class="text-[10px] text-blue-600">전문 지식, 자격, 글·말 감각, 오랜 시간 배우고 익힌 숙련도</p>
+                </div>
+                <div class="text-[10px] font-medium text-blue-500 text-center py-1 bg-white/60 rounded-lg border border-blue-100">슬롯 2</div>
+              </div>
+              <div class="rounded-2xl border-2 border-dashed border-purple-300 bg-purple-50/30 p-3 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center space-x-1.5 text-purple-800 font-bold text-xs mb-1">
+                    <span>🤝 사회자본</span>
+                  </div>
+                  <p class="text-[10px] text-purple-600">신뢰하는 동료, 멘토, 네트워크, 넘어질 때 손잡아 줄 관계</p>
+                </div>
+                <div class="text-[10px] font-medium text-purple-500 text-center py-1 bg-white/60 rounded-lg border border-purple-100">슬롯 3</div>
+              </div>
+              <div class="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/30 p-3 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center space-x-1.5 text-amber-800 font-bold text-xs mb-1">
+                    <span>🏅 상징자본</span>
+                  </div>
+                  <p class="text-[10px] text-amber-600">공식 평판, 직함, 이전 성공 이력, 타인이 인정해 주는 권위</p>
+                </div>
+                <div class="text-[10px] font-medium text-amber-500 text-center py-1 bg-white/60 rounded-lg border border-amber-100">슬롯 4</div>
+              </div>
+              <div class="rounded-2xl border-2 border-dashed border-rose-300 bg-rose-50/30 p-3 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center space-x-1.5 text-rose-800 font-bold text-xs mb-1">
+                    <span>🌿 비환전 소중한 가치</span>
+                  </div>
+                  <p class="text-[10px] text-rose-600">자본화되지 않아도 소중한 쉼, 돌봄, 우정, 취미, 생명력</p>
+                </div>
+                <div class="text-[10px] font-medium text-rose-500 text-center py-1 bg-white/60 rounded-lg border border-rose-100">슬롯 5</div>
+              </div>
+            </div>
+          `;
+        }
       } else if (mode === 3) {
-        // MODE 3: Narrative Voice 4-Sorting Board
-        bg.innerHTML = `
-          <div class="w-full h-full p-6 flex flex-col justify-between">
-            <!-- Center/Top Target Area -->
-            <div class="w-full max-w-xl mx-auto h-24 rounded-2xl border-2 border-dashed border-slate-300 bg-white/80 p-3 flex flex-col items-center justify-center text-center shadow-xs">
-              <span class="text-xs font-bold text-slate-700">💭 나를 힘들게 하는 문제의 목소리 / 채찍질 (은유 카드 배치 존)</span>
-              <p class="text-[10px] text-slate-400 mt-1">이곳에 카드를 놓고, 아래 4개 색상 영역 중 하나로 이동하여 새 문장으로 고쳐 쓰세요.</p>
-            </div>
-
-            <!-- 4 Color Sorting Zones -->
-            <div class="grid grid-cols-4 gap-4 h-48 mt-4">
-              <!-- Green: 유지 -->
-              <div class="rounded-2xl border-2 border-emerald-400 bg-emerald-50/40 p-3 flex flex-col justify-between">
-                <div>
-                  <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">🟢 [유지]</span>
-                  <p class="text-xs font-bold text-emerald-900 mt-1">내 존엄과 성장에 도움 되는 기준</p>
-                </div>
-                <p class="text-[10px] text-emerald-600">"이 기준은 나를 보호하고 단단하게 만듭니다."</p>
+        // MODE 3: 4-Color Sorting
+        if (isMobile) {
+          bg.innerHTML = `
+            <div class="w-full h-full p-2 flex flex-col gap-2">
+              <div class="h-12 rounded-xl border border-dashed border-slate-300 bg-white/80 p-1.5 flex items-center justify-center text-center shadow-xs">
+                <span class="text-[10px] font-bold text-slate-700">💭 문제의 목소리 / 채찍질 은유 카드 존</span>
               </div>
-
-              <!-- Yellow: 수정 -->
-              <div class="rounded-2xl border-2 border-amber-400 bg-amber-50/40 p-3 flex flex-col justify-between">
-                <div>
-                  <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">🟡 [수정]</span>
-                  <p class="text-xs font-bold text-amber-900 mt-1">취지는 좋으나 표현/강도를 완화할 기준</p>
+              <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-2">
+                <div class="rounded-xl border border-emerald-400 bg-emerald-50/40 p-2 flex flex-col justify-between">
+                  <span class="text-[10px] font-bold text-emerald-800">🟢 [유지] 내 존엄 기준</span>
+                  <p class="text-[8px] text-emerald-600">나를 지키는 힘</p>
                 </div>
-                <p class="text-[10px] text-amber-600">"원래 목적을 살리되, 숨 쉴 틈을 더해 다시 씁니다."</p>
-              </div>
-
-              <!-- Red: 내려놓기 -->
-              <div class="rounded-2xl border-2 border-rose-400 bg-rose-50/40 p-3 flex flex-col justify-between">
-                <div>
-                  <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">🔴 [내려놓기]</span>
-                  <p class="text-xs font-bold text-rose-900 mt-1">타인의 기대이며 나를 소모시키는 기준</p>
+                <div class="rounded-xl border border-amber-400 bg-amber-50/40 p-2 flex flex-col justify-between">
+                  <span class="text-[10px] font-bold text-amber-800">🟡 [수정] 고쳐 쓸 기준</span>
+                  <p class="text-[8px] text-amber-600">완화하여 다시 쓰기</p>
                 </div>
-                <p class="text-[10px] text-rose-600">"내 삶의 주도권을 위해 오늘 작별 인사를 건넵니다."</p>
-              </div>
-
-              <!-- Blue: 보류 -->
-              <div class="rounded-2xl border-2 border-blue-400 bg-blue-50/40 p-3 flex flex-col justify-between">
-                <div>
-                  <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">🔵 [보류]</span>
-                  <p class="text-xs font-bold text-blue-900 mt-1">아직 명확하지 않아 시간을 두고 볼 기준</p>
+                <div class="rounded-xl border border-rose-400 bg-rose-50/40 p-2 flex flex-col justify-between">
+                  <span class="text-[10px] font-bold text-rose-800">🔴 [내려놓기] 타인의 기대</span>
+                  <p class="text-[8px] text-rose-600">오늘 작별하기</p>
                 </div>
-                <p class="text-[10px] text-blue-600">"섣불리 결론내리지 않고 관찰의 시간을 갖습니다."</p>
+                <div class="rounded-xl border border-blue-400 bg-blue-50/40 p-2 flex flex-col justify-between">
+                  <span class="text-[10px] font-bold text-blue-800">🔵 [보류] 지켜볼 기준</span>
+                  <p class="text-[8px] text-blue-600">시간을 두고 관찰</p>
+                </div>
               </div>
             </div>
-          </div>
-        `;
+          `;
+        } else {
+          bg.innerHTML = `
+            <div class="w-full h-full p-6 flex flex-col justify-between">
+              <div class="w-full max-w-xl mx-auto h-24 rounded-2xl border-2 border-dashed border-slate-300 bg-white/80 p-3 flex flex-col items-center justify-center text-center shadow-xs">
+                <span class="text-xs font-bold text-slate-700">💭 나를 힘들게 하는 문제의 목소리 / 채찍질 (은유 카드 배치 존)</span>
+                <p class="text-[10px] text-slate-400 mt-1">이곳에 카드를 놓고, 아래 4개 색상 영역 중 하나로 이동하여 새 문장으로 고쳐 쓰세요.</p>
+              </div>
+              <div class="grid grid-cols-4 gap-4 h-48 mt-4">
+                <div class="rounded-2xl border-2 border-emerald-400 bg-emerald-50/40 p-3 flex flex-col justify-between">
+                  <div>
+                    <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">🟢 [유지]</span>
+                    <p class="text-xs font-bold text-emerald-900 mt-1">내 존엄과 성장에 도움 되는 기준</p>
+                  </div>
+                  <p class="text-[10px] text-emerald-600">"이 기준은 나를 보호하고 단단하게 만듭니다."</p>
+                </div>
+                <div class="rounded-2xl border-2 border-amber-400 bg-amber-50/40 p-3 flex flex-col justify-between">
+                  <div>
+                    <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">🟡 [수정]</span>
+                    <p class="text-xs font-bold text-amber-900 mt-1">취지는 좋으나 표현/강도를 완화할 기준</p>
+                  </div>
+                  <p class="text-[10px] text-amber-600">"원래 목적을 살리되, 숨 쉴 틈을 더해 다시 씁니다."</p>
+                </div>
+                <div class="rounded-2xl border-2 border-rose-400 bg-rose-50/40 p-3 flex flex-col justify-between">
+                  <div>
+                    <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">🔴 [내려놓기]</span>
+                    <p class="text-xs font-bold text-rose-900 mt-1">타인의 기대이며 나를 소모시키는 기준</p>
+                  </div>
+                  <p class="text-[10px] text-rose-600">"내 삶의 주도권을 위해 오늘 작별 인사를 건넵니다."</p>
+                </div>
+                <div class="rounded-2xl border-2 border-blue-400 bg-blue-50/40 p-3 flex flex-col justify-between">
+                  <div>
+                    <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">🔵 [보류]</span>
+                    <p class="text-xs font-bold text-blue-900 mt-1">아직 명확하지 않아 시간을 두고 볼 기준</p>
+                  </div>
+                  <p class="text-[10px] text-blue-600">"섣불리 결론내리지 않고 관찰의 시간을 갖습니다."</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
       } else if (mode === 4) {
-        // MODE 4: Force Field 4-Quadrant Planner
-        bg.innerHTML = `
-          <div class="w-full h-full p-6 flex gap-4">
-            <!-- Left: Driving Force (+) -->
-            <div class="w-1/4 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/20 p-4 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center space-x-1.5 text-blue-800 font-bold text-xs mb-1">
-                  <span>⚡ 추진력 (+) - 나아가게 하는 힘</span>
-                </div>
-                <p class="text-[10px] text-blue-600">변화를 시작하고 싶은 동기, 나를 일으켜 세우는 열망과 자원</p>
+        // MODE 4: Force Field
+        if (isMobile) {
+          bg.innerHTML = `
+            <div class="w-full h-full p-2 flex flex-col gap-2">
+              <div class="h-12 rounded-xl border border-blue-300 bg-blue-50/30 p-2 flex items-center justify-between">
+                <span class="text-[10px] font-bold text-blue-800">⚡ 추진력 (+)</span>
+                <span class="text-[8px] text-blue-500">나아가게 하는 힘 슬롯</span>
               </div>
-              <div class="text-[10px] font-medium text-blue-400 text-center py-1 bg-white/70 rounded-lg">추진력 카드 슬롯</div>
-            </div>
-
-            <!-- Right: 4 Quadrants for Restraining Force (-) -->
-            <div class="w-3/4 rounded-2xl border-2 border-slate-300 bg-white/70 p-4 flex flex-col">
-              <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
-                <span class="text-xs font-bold text-slate-800">🛑 억제력 (-) 재배치 4분면</span>
-                <span class="text-[10px] text-slate-500">억제 요인을 4가지 실천 영역 중 한 곳으로 옮겨 5분 실험을 설계하세요.</span>
-              </div>
-
-              <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
-                <!-- Q1: 내가 바꿈 -->
-                <div class="rounded-xl border border-emerald-300 bg-emerald-50/30 p-2.5 flex flex-col justify-between">
-                  <div>
-                    <span class="text-[11px] font-bold text-emerald-800">👤 [내가 바꿈] (전적 통제 가능)</span>
-                    <p class="text-[10px] text-emerald-600">개인 루틴, 혼자만의 경계 설정, 호흡 틈새</p>
-                  </div>
-                  <span class="text-[9px] text-emerald-500">통제력 100% 영역</span>
+              <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-2">
+                <div class="rounded-xl border border-emerald-300 bg-emerald-50/30 p-2 flex flex-col justify-between">
+                  <span class="text-[9px] font-bold text-emerald-800">👤 [내가 바꿈]</span>
+                  <span class="text-[8px] text-emerald-600">개인 루틴/경계</span>
                 </div>
-
-                <!-- Q2: 영향 미침 -->
-                <div class="rounded-xl border border-blue-300 bg-blue-50/30 p-2.5 flex flex-col justify-between">
-                  <div>
-                    <span class="text-[11px] font-bold text-blue-800">🗣️ [영향 미침] (대화·협상 시도)</span>
-                    <p class="text-[10px] text-blue-600">상사와의 1:1 면담, 가족과의 대화, 솔직한 거절</p>
-                  </div>
-                  <span class="text-[9px] text-blue-500">관계적 소통 영역</span>
+                <div class="rounded-xl border border-blue-300 bg-blue-50/30 p-2 flex flex-col justify-between">
+                  <span class="text-[9px] font-bold text-blue-800">🗣️ [영향 미침]</span>
+                  <span class="text-[8px] text-blue-600">면담/대화/협상</span>
                 </div>
-
-                <!-- Q3: 함께 연대 -->
-                <div class="rounded-xl border border-purple-300 bg-purple-50/30 p-2.5 flex flex-col justify-between">
-                  <div>
-                    <span class="text-[11px] font-bold text-purple-800">🤝 [함께 연대] (혼자 불가능)</span>
-                    <p class="text-[10px] text-purple-600">동료들과의 스터디, 커뮤니티, 외부 조력자</p>
-                  </div>
-                  <span class="text-[9px] text-purple-500">상호 지지 영역</span>
+                <div class="rounded-xl border border-purple-300 bg-purple-50/30 p-2 flex flex-col justify-between">
+                  <span class="text-[9px] font-bold text-purple-800">🤝 [함께 연대]</span>
+                  <span class="text-[8px] text-purple-600">동료/커뮤니티</span>
                 </div>
-
-                <!-- Q4: 수용 / 거리두기 -->
-                <div class="rounded-xl border border-slate-300 bg-slate-100/50 p-2.5 flex flex-col justify-between">
-                  <div>
-                    <span class="text-[11px] font-bold text-slate-700">🧘 [수용 / 거리두기] (당장 불변 구조)</span>
-                    <p class="text-[10px] text-slate-500">업계 관행, 경제 상황 → 억지 싸움 멈추고 에너지 비축</p>
-                  </div>
-                  <span class="text-[9px] text-slate-400">지혜로운 관조 영역</span>
+                <div class="rounded-xl border border-slate-300 bg-slate-100/50 p-2 flex flex-col justify-between">
+                  <span class="text-[9px] font-bold text-slate-700">🧘 [수용/거리두기]</span>
+                  <span class="text-[8px] text-slate-500">에너지 비축</span>
                 </div>
               </div>
             </div>
-          </div>
-        `;
+          `;
+        } else {
+          bg.innerHTML = `
+            <div class="w-full h-full p-6 flex gap-4">
+              <div class="w-1/4 rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50/20 p-4 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center space-x-1.5 text-blue-800 font-bold text-xs mb-1">
+                    <span>⚡ 추진력 (+) - 나아가게 하는 힘</span>
+                  </div>
+                  <p class="text-[10px] text-blue-600">변화를 시작하고 싶은 동기, 나를 일으켜 세우는 열망과 자원</p>
+                </div>
+                <div class="text-[10px] font-medium text-blue-400 text-center py-1 bg-white/70 rounded-lg">추진력 카드 슬롯</div>
+              </div>
+              <div class="w-3/4 rounded-2xl border-2 border-slate-300 bg-white/70 p-4 flex flex-col">
+                <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+                  <span class="text-xs font-bold text-slate-800">🛑 억제력 (-) 재배치 4분면</span>
+                  <span class="text-[10px] text-slate-500">억제 요인을 4가지 실천 영역 중 한 곳으로 옮겨 5분 실험을 설계하세요.</span>
+                </div>
+                <div class="flex-1 grid grid-cols-2 grid-rows-2 gap-3">
+                  <div class="rounded-xl border border-emerald-300 bg-emerald-50/30 p-2.5 flex flex-col justify-between">
+                    <div>
+                      <span class="text-[11px] font-bold text-emerald-800">👤 [내가 바꿈] (전적 통제 가능)</span>
+                      <p class="text-[10px] text-emerald-600">개인 루틴, 혼자만의 경계 설정, 호흡 틈새</p>
+                    </div>
+                    <span class="text-[9px] text-emerald-500">통제력 100% 영역</span>
+                  </div>
+                  <div class="rounded-xl border border-blue-300 bg-blue-50/30 p-2.5 flex flex-col justify-between">
+                    <div>
+                      <span class="text-[11px] font-bold text-blue-800">🗣️ [영향 미침] (대화·협상 시도)</span>
+                      <p class="text-[10px] text-blue-600">상사와의 1:1 면담, 가족과의 대화, 솔직한 거절</p>
+                    </div>
+                    <span class="text-[9px] text-blue-500">관계적 소통 영역</span>
+                  </div>
+                  <div class="rounded-xl border border-purple-300 bg-purple-50/30 p-2.5 flex flex-col justify-between">
+                    <div>
+                      <span class="text-[11px] font-bold text-purple-800">🤝 [함께 연대] (혼자 불가능)</span>
+                      <p class="text-[10px] text-purple-600">동료들과의 스터디, 커뮤니티, 외부 조력자</p>
+                    </div>
+                    <span class="text-[9px] text-purple-500">상호 지지 영역</span>
+                  </div>
+                  <div class="rounded-xl border border-slate-300 bg-slate-100/50 p-2.5 flex flex-col justify-between">
+                    <div>
+                      <span class="text-[11px] font-bold text-slate-700">🧘 [수용 / 거리두기] (당장 불변 구조)</span>
+                      <p class="text-[10px] text-slate-500">업계 관행, 경제 상황 → 억지 싸움 멈추고 에너지 비축</p>
+                    </div>
+                    <span class="text-[9px] text-slate-400">지혜로운 관조 영역</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
       }
     }
 
     // ================= TOOL SELECTION =================
     function setTool(toolName) {
       state.activeTool = toolName;
+      // Desktop tool buttons
       document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.classList.remove('bg-white', 'text-slate-800', 'shadow-xs');
         btn.classList.add('text-slate-600');
       });
+      // Mobile tool buttons
+      ['mobileToolSelect', 'mobileToolLine', 'mobileToolNote'].forEach(id => {
+        const mb = document.getElementById(id);
+        if (mb) mb.className = "px-2 py-0.5 rounded text-slate-600 hover:text-slate-900";
+      });
 
       if (toolName === 'select') {
-        document.getElementById('toolSelect').classList.add('bg-white', 'text-slate-800', 'shadow-xs');
+        const b = document.getElementById('toolSelect');
+        if (b) b.classList.add('bg-white', 'text-slate-800', 'shadow-xs');
+        const mb = document.getElementById('mobileToolSelect');
+        if (mb) mb.className = "px-2 py-0.5 rounded bg-white text-slate-900 shadow-2xs font-semibold";
       } else if (toolName === 'line') {
-        document.getElementById('toolLine').classList.add('bg-white', 'text-slate-800', 'shadow-xs');
+        const b = document.getElementById('toolLine');
+        if (b) b.classList.add('bg-white', 'text-slate-800', 'shadow-xs');
+        const mb = document.getElementById('mobileToolLine');
+        if (mb) mb.className = "px-2 py-0.5 rounded bg-white text-slate-900 shadow-2xs font-semibold";
       } else if (toolName === 'note') {
-        document.getElementById('toolNote').classList.add('bg-white', 'text-slate-800', 'shadow-xs');
+        const b = document.getElementById('toolNote');
+        if (b) b.classList.add('bg-white', 'text-slate-800', 'shadow-xs');
+        const mb = document.getElementById('mobileToolNote');
+        if (mb) mb.className = "px-2 py-0.5 rounded bg-white text-slate-900 shadow-2xs font-semibold";
       }
     }
 
     // ================= CARD DECK DRAWER =================
-    state.deckViewMode = 'single'; // 'single' (1-row slide) or 'double' (2-row grid)
-
     function initDeckDrawer() {
       renderDrawerCards(CARDS_DATA);
 
@@ -1359,14 +1606,14 @@
       const btn = document.getElementById('deckViewModeBtn');
 
       if (state.deckViewMode === 'double') {
-        drawer.style.height = '340px';
-        container.className = "flex-1 h-full overflow-x-auto overflow-y-hidden px-14 py-3 grid grid-rows-2 grid-flow-col gap-3 items-center scroll-smooth";
-        btn.innerHTML = '<span>⊟ 1줄 슬라이드</span>';
+        drawer.style.height = window.innerWidth <= 768 ? '280px' : '340px';
+        container.className = "flex-1 h-full overflow-x-auto overflow-y-hidden px-10 sm:px-14 py-2 sm:py-3 grid grid-rows-2 grid-flow-col gap-2.5 sm:gap-3 items-center scroll-smooth";
+        btn.innerHTML = '<span>⊟ 1줄</span>';
         btn.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
       } else {
-        drawer.style.height = '220px';
-        container.className = "flex-1 h-full overflow-x-auto overflow-y-hidden px-14 py-3 flex space-x-3 items-center scroll-smooth";
-        btn.innerHTML = '<span>⊞ 2줄로 넓게 보기</span>';
+        drawer.style.height = window.innerWidth <= 768 ? '180px' : '220px';
+        container.className = "flex-1 h-full overflow-x-auto overflow-y-hidden px-10 sm:px-14 py-2 sm:py-3 flex space-x-2.5 sm:space-x-3 items-center scroll-smooth";
+        btn.innerHTML = '<span>⊞ 2줄 보기</span>';
         btn.classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-200');
       }
     }
@@ -1377,10 +1624,15 @@
       state.drawerOpen = !state.drawerOpen;
 
       if (state.drawerOpen) {
-        drawer.style.height = state.deckViewMode === 'double' ? '340px' : '220px';
+        const isMobile = window.innerWidth <= 768;
+        if (state.deckViewMode === 'double') {
+          drawer.style.height = isMobile ? '280px' : '340px';
+        } else {
+          drawer.style.height = isMobile ? '180px' : '220px';
+        }
         icon.innerText = '▼';
       } else {
-        drawer.style.height = '36px';
+        drawer.style.height = window.innerWidth <= 768 ? '40px' : '36px';
         icon.innerText = '▲';
       }
     }
@@ -1389,9 +1641,9 @@
       state.currentFilterTheme = themeNum;
       document.querySelectorAll('.theme-filter-pill').forEach((pill, idx) => {
         if (idx === themeNum) {
-          pill.className = "theme-filter-pill px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200";
+          pill.className = "theme-filter-pill px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200 shrink-0";
         } else {
-          pill.className = "theme-filter-pill px-2.5 py-0.5 rounded-full text-[11px] font-medium text-slate-600 hover:bg-slate-100";
+          pill.className = "theme-filter-pill px-2 py-0.5 rounded-full text-[10px] font-medium text-slate-600 hover:bg-slate-100 shrink-0";
         }
       });
 
@@ -1423,6 +1675,34 @@
       renderDrawerCards(filtered);
     }
 
+    // Tap to add card directly to canvas center (Super handy on mobile touch devices!)
+    function addCardToCanvasCenter(cardId) {
+      const instanceId = 'card_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      // add with slight random offset around center
+      const offsetX = (Math.random() - 0.5) * 16;
+      const offsetY = (Math.random() - 0.5) * 16;
+
+      const cardData = {
+        id: instanceId,
+        cardId: cardId,
+        xPct: Math.max(10, Math.min(90, 50 + offsetX)),
+        yPct: Math.max(10, Math.min(90, 45 + offsetY)),
+        isFlipped: false,
+        scale: window.innerWidth <= 768 ? 0.9 : 1.0,
+        badge: null,
+        actionPlan: { experiment: '', witness: '' }
+      };
+
+      state.cardsOnCanvas[instanceId] = cardData;
+      renderCardElement(cardData);
+      broadcast('CARD_ADD', { instanceId, data: cardData });
+
+      // Auto-collapse drawer on mobile after adding to free up canvas space!
+      if (window.innerWidth <= 768 && state.drawerOpen) {
+        toggleDrawer();
+      }
+    }
+
     function renderDrawerCards(cardsList) {
       const container = document.getElementById('deckCardsContainer');
       const badge = document.getElementById('deckCardCountBadge');
@@ -1432,16 +1712,22 @@
 
       cardsList.forEach(card => {
         const item = document.createElement('div');
-        item.className = "shrink-0 w-36 h-28 bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-md hover:border-blue-400 transition flex flex-col group relative";
+        item.className = "shrink-0 w-32 sm:w-36 h-24 sm:h-28 bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-md hover:border-blue-400 transition flex flex-col group relative";
         item.draggable = true;
 
         item.innerHTML = `
-          <div class="relative w-full h-18 bg-slate-100 overflow-hidden">
-            <img src="${card.image_path}" alt="Card ${card.number_str}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-            <span class="absolute top-1 right-1 bg-slate-900/70 text-white font-mono text-[9px] px-1 py-0.5 rounded">#${card.number_str}</span>
+          <div class="relative w-full h-15 sm:h-18 bg-slate-100 overflow-hidden cursor-pointer" onclick="openCardPreviewModal(${card.id})" title="클릭하여 크게 보기 & 질문 확인">
+            <img src="${card.image_path}" alt="Card ${card.number_str}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300 pointer-events-none" />
+            <span class="absolute top-1 right-1 bg-slate-900/70 text-white font-mono text-[8px] sm:text-[9px] px-1 py-0.2 rounded">#${card.number_str}</span>
+            <div class="absolute top-1 left-1 bg-black/50 text-white text-[8px] px-1 py-0.2 rounded opacity-0 group-hover:opacity-100 transition flex items-center space-x-0.5">
+              <span>🔍 크게</span>
+            </div>
+            <button onclick="event.stopPropagation(); addCardToCanvasCenter(${card.id})" class="absolute bottom-1 right-1 bg-blue-600/95 hover:bg-blue-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow flex items-center space-x-0.5 transition" title="캔버스에 바로 놓기">
+              <span>+ 놓기</span>
+            </button>
           </div>
-          <div class="p-1.5 flex-1 flex items-center bg-white">
-            <p class="text-[10px] text-slate-700 line-clamp-2 leading-tight">${card.question}</p>
+          <div class="p-1 sm:p-1.5 flex-1 flex items-center bg-white cursor-pointer" onclick="openCardPreviewModal(${card.id})">
+            <p class="text-[9px] sm:text-[10px] text-slate-700 line-clamp-2 leading-tight">${card.question}</p>
           </div>
         `;
 
@@ -1479,7 +1765,7 @@
           xPct: xPct,
           yPct: yPct,
           isFlipped: false,
-          scale: 1.0,
+          scale: window.innerWidth <= 768 ? 0.9 : 1.0,
           badge: null,
           actionPlan: { experiment: '', witness: '' }
         };
@@ -1488,8 +1774,7 @@
         renderCardElement(cardData);
         broadcast('CARD_ADD', { instanceId, data: cardData });
 
-        // If in Mode 3 (Voice Sorting), check if dropped in sorting zones
-        if (state.currentMode === 3 && yPct > 60) {
+        if (state.currentMode === 3 && yPct > 55) {
           openVoiceModalForCard(instanceId);
         }
       } catch (err) {
@@ -1505,82 +1790,79 @@
       if (!cardEl) {
         cardEl = document.createElement('div');
         cardEl.id = cardData.id;
-        cardEl.className = "absolute z-20 group";
+        cardEl.className = "absolute z-20 group touch-none";
         container.appendChild(cardEl);
       }
 
       const cardDef = CARDS_DATA.find(c => c.id === cardData.cardId) || CARDS_DATA[0];
 
-      // Positioning with percentage
       cardEl.style.left = `${cardData.xPct}%`;
       cardEl.style.top = `${cardData.yPct}%`;
       cardEl.style.transform = `translate(-50%, -50%) scale(${cardData.scale || 1.0})`;
 
       const flipClass = cardData.isFlipped ? 'rotate-y-180' : '';
 
-      // Mode 3 badge HTML
       let badgeHtml = '';
       if (cardData.badge) {
         badgeHtml = `
-          <div class="mt-1.5 p-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg shadow-xs text-left">
-            <span class="inline-block text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-600 text-white">${cardData.badge.category}</span>
-            <p class="text-[10px] text-slate-800 font-semibold mt-0.5">"${cardData.badge.dignitySentence}"</p>
+          <div class="mt-1 p-1 sm:p-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg shadow-xs text-left max-w-full">
+            <span class="inline-block text-[8px] sm:text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-600 text-white">${cardData.badge.category}</span>
+            <p class="text-[9px] sm:text-[10px] text-slate-800 font-semibold mt-0.5 line-clamp-2">"${cardData.badge.dignitySentence}"</p>
           </div>
         `;
       }
 
-      // Mode 4 Action Plan HTML
       let actionPlanHtml = '';
       if (state.currentMode === 4) {
         actionPlanHtml = `
-          <div class="mt-1.5 p-1.5 bg-amber-50/90 border border-amber-200 rounded-lg shadow-xs text-left text-[10px] space-y-1">
+          <div class="mt-1 p-1 bg-amber-50/90 border border-amber-200 rounded-lg shadow-xs text-left text-[9px] sm:text-[10px] space-y-1 max-w-full">
             <div class="flex items-center space-x-1">
-              <span class="font-bold text-amber-800 shrink-0">🎯 5분 실험:</span>
+              <span class="font-bold text-amber-800 shrink-0">🎯 실험:</span>
               <input type="text" value="${cardData.actionPlan?.experiment || ''}" 
-                     placeholder="예: 월요일 5분 면담" 
+                     placeholder="5분 실험" 
                      onchange="updateActionPlan('${cardData.id}', 'experiment', this.value)"
-                     class="w-full bg-white px-1 py-0.5 rounded border border-amber-200 text-[10px]"/>
+                     class="w-full bg-white px-1 py-0.2 rounded border border-amber-200 text-[9px]"/>
             </div>
             <div class="flex items-center space-x-1">
               <span class="font-bold text-amber-800 shrink-0">👁️ 증인:</span>
               <input type="text" value="${cardData.actionPlan?.witness || ''}" 
-                     placeholder="예: 김 과장님" 
+                     placeholder="지켜볼 사람" 
                      onchange="updateActionPlan('${cardData.id}', 'witness', this.value)"
-                     class="w-full bg-white px-1 py-0.5 rounded border border-amber-200 text-[10px]"/>
+                     class="w-full bg-white px-1 py-0.2 rounded border border-amber-200 text-[9px]"/>
             </div>
           </div>
         `;
       }
 
       cardEl.innerHTML = `
-        <div class="relative w-48 h-32 perspective-1000 cursor-grab active:cursor-grabbing select-none" id="flipContainer_${cardData.id}">
-          <!-- Hover Floating Control Buttons -->
-          <div class="absolute -top-3 -right-3 z-30 hidden group-hover:flex items-center space-x-1 bg-white/95 rounded-full p-1 shadow-md border border-slate-200">
+        <div class="relative w-36 h-24 sm:w-48 sm:h-32 perspective-1000 cursor-grab active:cursor-grabbing select-none card-exporting ${cardData.isFlipped ? 'is-flipped' : 'is-not-flipped'}" id="flipContainer_${cardData.id}">
+          <!-- Floating Control Buttons (Visible on hover & touch) -->
+          <div class="absolute -top-3 -right-2 z-30 flex items-center space-x-1 bg-white/95 rounded-full p-0.5 shadow-md border border-slate-200">
             <button onclick="toggleCardFlip('${cardData.id}', event)" class="w-6 h-6 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center text-xs" title="카드 뒤집기">🔄</button>
             <button onclick="removeCard('${cardData.id}', event)" class="w-6 h-6 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center text-xs" title="삭제">✕</button>
           </div>
 
           <!-- 3D Card Inner -->
-          <div class="w-full h-full transform-style-3d ${flipClass}" id="inner_${cardData.id}">
+          <div class="w-full h-full transform-style-3d card-3d-inner ${flipClass}" id="inner_${cardData.id}">
             
             <!-- FRONT (Photo) -->
-            <div class="absolute inset-0 backface-hidden w-full h-full rounded-2xl overflow-hidden shadow-lg border border-slate-200/80 bg-white">
+            <div class="card-face-front absolute inset-0 backface-hidden w-full h-full rounded-xl sm:rounded-2xl overflow-hidden shadow-md sm:shadow-lg border border-slate-200/80 bg-white">
               <img src="${cardDef.image_path}" alt="Card" class="w-full h-full object-cover pointer-events-none" />
-              <div class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-mono px-2 py-0.5 rounded-full shadow">
+              <div class="absolute top-1.5 left-1.5 bg-slate-900/80 backdrop-blur-xs text-white text-[8px] sm:text-[10px] font-mono px-1.5 py-0.2 rounded-full shadow">
                 #${cardDef.number_str}
               </div>
             </div>
 
             <!-- BACK (Question Text) -->
-            <div class="absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-2xl p-3 shadow-lg border-2 border-slate-200 bg-white flex flex-col justify-between text-center">
-              <div class="flex items-center justify-between text-[9px] text-slate-400 font-medium">
-                <span>${cardDef.theme}</span>
+            <div class="card-face-back absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-xl sm:rounded-2xl p-2 sm:p-3 shadow-md sm:shadow-lg border-2 border-slate-200 bg-white flex flex-col justify-between text-center">
+              <div class="flex items-center justify-between text-[8px] sm:text-[9px] text-slate-400 font-medium">
+                <span class="truncate max-w-[80%] text-left">${cardDef.theme}</span>
                 <span class="font-mono">#${cardDef.number_str}</span>
               </div>
-              <p class="text-xs font-bold text-slate-800 leading-relaxed px-1 my-auto">
+              <p class="text-[10px] sm:text-xs font-bold text-slate-800 leading-snug sm:leading-relaxed px-0.5 my-auto">
                 ${cardDef.question}
               </p>
-              <div class="text-[9px] text-blue-500 font-medium">더블클릭하여 사진 보기</div>
+              <div class="text-[8px] sm:text-[9px] text-blue-500 font-medium">탭하여 사진 보기</div>
             </div>
 
           </div>
@@ -1589,7 +1871,6 @@
         ${actionPlanHtml}
       `;
 
-      // Setup Pointer Dragging for this card
       attachCardDragEvents(cardEl, cardData);
     }
 
@@ -1636,13 +1917,12 @@
 
         broadcast('CARD_UPDATE', { instanceId: cardData.id, data: cardData });
 
-        // In Mode 3, if dropped into sorting zones
-        if (state.currentMode === 3 && cardData.yPct > 55) {
+        if (state.currentMode === 3 && cardData.yPct > 50) {
           openVoiceModalForCard(cardData.id);
         }
       };
 
-      // Double-click to flip
+      // Double-click or tap to flip
       el.ondblclick = (e) => {
         e.stopPropagation();
         toggleCardFlip(cardData.id);
@@ -1668,6 +1948,16 @@
       if (inner) {
         if (card.isFlipped) inner.classList.add('rotate-y-180');
         else inner.classList.remove('rotate-y-180');
+      }
+      const container = document.getElementById(`flipContainer_${instanceId}`);
+      if (container) {
+        if (card.isFlipped) {
+          container.classList.remove('is-not-flipped');
+          container.classList.add('is-flipped');
+        } else {
+          container.classList.remove('is-flipped');
+          container.classList.add('is-not-flipped');
+        }
       }
       broadcast('CARD_UPDATE', { instanceId, data: card });
     }
@@ -1711,7 +2001,7 @@
       if (!noteEl) {
         noteEl = document.createElement('div');
         noteEl.id = noteData.id;
-        noteEl.className = "absolute z-25 group";
+        noteEl.className = "absolute z-25 group touch-none";
         container.appendChild(noteEl);
       }
 
@@ -1720,13 +2010,13 @@
       noteEl.style.transform = `translate(-50%, -50%)`;
 
       noteEl.innerHTML = `
-        <div class="w-44 h-36 bg-amber-100/95 border border-amber-300 rounded-xl shadow-lg p-2.5 flex flex-col justify-between">
+        <div class="w-36 h-28 sm:w-44 sm:h-36 bg-amber-100/95 border border-amber-300 rounded-xl shadow-lg p-2 flex flex-col justify-between">
           <div class="flex items-center justify-between pb-1 border-b border-amber-200">
             <span class="text-[9px] font-bold text-amber-800">📝 메모</span>
             <button onclick="removeNote('${noteData.id}')" class="text-amber-600 hover:text-amber-900 text-xs font-bold">&times;</button>
           </div>
-          <textarea class="w-full h-full bg-transparent resize-none text-xs text-slate-800 focus:outline-none p-1 leading-snug"
-                    placeholder="성찰 메모를 적어보세요..."
+          <textarea class="w-full h-full bg-transparent resize-none text-[10px] sm:text-xs text-slate-800 focus:outline-none p-1 leading-snug"
+                    placeholder="성찰 메모..."
                     oninput="handleNoteTextInput('${noteData.id}', this.value)">${noteData.text || ''}</textarea>
         </div>
       `;
@@ -1833,7 +2123,6 @@
 
         document.getElementById('tempLine').classList.add('hidden');
 
-        // Only draw if moved slightly
         const dist = Math.hypot(endXPct - state.lineStartPoint.xPct, endYPct - state.lineStartPoint.yPct);
         if (dist > 3) {
           const lineId = 'line_' + Date.now();
@@ -1843,6 +2132,7 @@
             y1Pct: state.lineStartPoint.yPct,
             x2Pct: endXPct,
             y2Pct: endYPct,
+            style: state.lineStyle || 'curved',
             color: state.currentMode === 2 ? '#F59E0B' : '#3B82F6',
             label: state.currentMode === 2 ? '환전선' : '영향력'
           };
@@ -1856,14 +2146,153 @@
       }
     });
 
+    // Helper: Collect bounding boxes of cards on canvas
+    function getCardBoundingBoxes(canvasRect) {
+      const boxes = [];
+      Object.values(state.cardsOnCanvas).forEach(card => {
+        const el = document.getElementById(card.id);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          boxes.push({
+            id: card.id,
+            left: r.left - canvasRect.left,
+            top: r.top - canvasRect.top,
+            right: r.right - canvasRect.left,
+            bottom: r.bottom - canvasRect.top,
+            cx: (r.left + r.right) / 2 - canvasRect.left,
+            cy: (r.top + r.bottom) / 2 - canvasRect.top,
+            w: r.width,
+            h: r.height
+          });
+        }
+      });
+      return boxes;
+    }
+
+    // Smart PowerPoint-Style Dynamic Connection Line Routing with Card Avoidance
+    function computeSmartPath(x1, y1, x2, y2, style, boxes) {
+      if (style === 'straight') {
+        return {
+          d: `M ${x1} ${y1} L ${x2} ${y2}`,
+          midX: (x1 + x2) / 2,
+          midY: (y1 + y2) / 2
+        };
+      }
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy);
+
+      // Find any card blocking the direct path (excluding endpoints)
+      let blocker = null;
+      for (const box of boxes) {
+        const pad = 12;
+        const bx1 = box.left - pad, by1 = box.top - pad;
+        const bx2 = box.right + pad, by2 = box.bottom + pad;
+
+        const startInside = x1 >= bx1 && x1 <= bx2 && y1 >= by1 && y1 <= by2;
+        const endInside = x2 >= bx1 && x2 <= bx2 && y2 >= by1 && y2 <= by2;
+        if (startInside || endInside) continue;
+
+        const u = Math.max(0, Math.min(1, ((box.cx - x1) * dx + (box.cy - y1) * dy) / (len * len || 1)));
+        const projX = x1 + u * dx;
+        const projY = y1 + u * dy;
+        const dist = Math.hypot(box.cx - projX, box.cy - projY);
+
+        if (dist < Math.max(box.w, box.h) / 2 + pad && u > 0.15 && u < 0.85) {
+          blocker = box;
+          break;
+        }
+      }
+
+      if (style === 'orthogonal') {
+        // PowerPoint-style stepped elbow / detour
+        if (blocker) {
+          const detourAbove = (y1 + y2) / 2 <= blocker.cy;
+          const detourY = detourAbove ? blocker.top - 20 : blocker.bottom + 20;
+          const corner1X = blocker.left - 20 < x1 ? (x1 + blocker.left) / 2 : blocker.left - 20;
+          const corner2X = blocker.right + 20 > x2 ? (x2 + blocker.right) / 2 : blocker.right + 20;
+          return {
+            d: `M ${x1} ${y1} L ${corner1X} ${y1} L ${corner1X} ${detourY} L ${corner2X} ${detourY} L ${corner2X} ${y2} L ${x2} ${y2}`,
+            midX: (corner1X + corner2X) / 2,
+            midY: detourY
+          };
+        } else {
+          const midX = (x1 + x2) / 2;
+          return {
+            d: `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`,
+            midX: midX,
+            midY: (y1 + y2) / 2
+          };
+        }
+      }
+
+      // Default: 'curved' (Organic Smooth Bézier curve with obstacle bend)
+      if (blocker) {
+        const normX = -dy / (len || 1);
+        const normY = dx / (len || 1);
+        const toBlockerX = blocker.cx - (x1 + x2) / 2;
+        const toBlockerY = blocker.cy - (y1 + y2) / 2;
+        const dot = toBlockerX * normX + toBlockerY * normY;
+        const sign = dot > 0 ? -1 : 1;
+        const offset = Math.max(45, Math.min(130, len * 0.35)) * sign;
+
+        const cx = (x1 + x2) / 2 + normX * offset;
+        const cy = (y1 + y2) / 2 + normY * offset;
+        return {
+          d: `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`,
+          midX: cx,
+          midY: cy
+        };
+      } else {
+        const normX = -dy / (len || 1);
+        const normY = dx / (len || 1);
+        const curvature = Math.min(32, len * 0.12);
+        const cx1 = x1 + dx * 0.3 + normX * curvature;
+        const cy1 = y1 + dy * 0.3 + normY * curvature;
+        const cx2 = x1 + dx * 0.7 + normX * curvature;
+        const cy2 = y1 + dy * 0.7 + normY * curvature;
+        return {
+          d: `M ${x1} ${y1} C ${cx1} ${cy1} ${cx2} ${cy2} ${x2} ${y2}`,
+          midX: (x1 + x2) / 2 + normX * (curvature * 0.8),
+          midY: (y1 + y2) / 2 + normY * (curvature * 0.8)
+        };
+      }
+    }
+
+    function cycleLineStyle() {
+      const styles = ['curved', 'orthogonal', 'straight'];
+      const nextIdx = (styles.indexOf(state.lineStyle) + 1) % styles.length;
+      state.lineStyle = styles[nextIdx];
+
+      const labels = {
+        curved: '〰️ 곡선',
+        orthogonal: '🔀 절곡선(회피)',
+        straight: '📏 직선'
+      };
+      const mobileLabels = {
+        curved: '〰️',
+        orthogonal: '🔀',
+        straight: '📏'
+      };
+
+      const lbl = document.getElementById('lineStyleLabel');
+      if (lbl) lbl.innerText = labels[state.lineStyle];
+      const mlbl = document.getElementById('mobileLineStyleLabel');
+      if (mlbl) mlbl.innerText = mobileLabels[state.lineStyle];
+
+      renderAllLines();
+      broadcast('LINE_STYLE', { lineStyle: state.lineStyle });
+    }
+
     function renderAllLines() {
       const svg = document.getElementById('svgOverlay');
-      // Keep defs
       const defs = svg.querySelector('defs');
       svg.innerHTML = '';
       if (defs) svg.appendChild(defs);
 
       const rect = canvasContainer.getBoundingClientRect();
+      const boxes = getCardBoundingBoxes(rect);
 
       Object.values(state.linesOnCanvas).forEach(line => {
         const x1 = (line.x1Pct / 100) * rect.width;
@@ -1871,23 +2300,23 @@
         const x2 = (line.x2Pct / 100) * rect.width;
         const y2 = (line.y2Pct / 100) * rect.height;
 
+        const lineStyle = line.style || state.lineStyle || 'curved';
+        const pathData = computeSmartPath(x1, y1, x2, y2, lineStyle, boxes);
+
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        path.setAttribute('x1', x1);
-        path.setAttribute('y1', y1);
-        path.setAttribute('x2', x2);
-        path.setAttribute('y2', y2);
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData.d);
+        path.setAttribute('fill', 'none');
         path.setAttribute('stroke', line.color || '#3B82F6');
         path.setAttribute('stroke-width', '2.5');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
         path.setAttribute('marker-end', line.color === '#F59E0B' ? 'url(#arrowhead-amber)' : 'url(#arrowhead-blue)');
 
-        // Label in middle
-        const midX = (x1 + x2) / 2;
-        const midY = (y1 + y2) / 2;
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', midX);
-        text.setAttribute('y', midY - 6);
+        text.setAttribute('x', pathData.midX);
+        text.setAttribute('y', pathData.midY - 6);
         text.setAttribute('text-anchor', 'middle');
         text.setAttribute('fill', line.color || '#3B82F6');
         text.setAttribute('font-size', '10');
@@ -1900,15 +2329,11 @@
       });
     }
 
-    window.addEventListener('resize', () => {
-      renderAllLines();
-    });
-
     // ================= CURSOR TRACKING =================
     let lastCursorSend = 0;
     function handleCanvasMouseMove(e) {
       const now = Date.now();
-      if (now - lastCursorSend > 45) { // throttle 45ms
+      if (now - lastCursorSend > 45) {
         lastCursorSend = now;
         const rect = canvasContainer.getBoundingClientRect();
         const xPct = ((e.clientX - rect.left) / rect.width) * 100;
@@ -1949,6 +2374,48 @@
       Object.values(state.notesOnCanvas).forEach(note => renderNoteElement(note));
     }
 
+
+    // ================= LARGE CARD PREVIEW MODAL LOGIC =================
+    function openCardPreviewModal(cardId) {
+      const cardDef = CARDS_DATA.find(c => c.id === cardId);
+      if (!cardDef) return;
+
+      state.previewCardId = cardId;
+      state.previewModalFlipped = false;
+
+      document.getElementById('previewModalImg').src = cardDef.image_path;
+      document.getElementById('previewModalQuestion').innerText = cardDef.question;
+      document.getElementById('previewModalThemeBadge').innerText = cardDef.theme;
+      document.getElementById('previewModalNumberBadge').innerText = `#${cardDef.number_str}`;
+      document.getElementById('previewModalBackNum').innerText = `#${cardDef.number_str}`;
+
+      const inner = document.getElementById('previewModalCardInner');
+      inner.classList.remove('rotate-y-180');
+
+      document.getElementById('cardPreviewModal').classList.remove('hidden');
+    }
+
+    function togglePreviewModalFlip() {
+      state.previewModalFlipped = !state.previewModalFlipped;
+      const inner = document.getElementById('previewModalCardInner');
+      if (state.previewModalFlipped) {
+        inner.classList.add('rotate-y-180');
+      } else {
+        inner.classList.remove('rotate-y-180');
+      }
+    }
+
+    function closeCardPreviewModal() {
+      document.getElementById('cardPreviewModal').classList.add('hidden');
+      state.previewCardId = null;
+    }
+
+    function placePreviewCardToCanvas() {
+      if (!state.previewCardId) return;
+      addCardToCanvasCenter(state.previewCardId);
+      closeCardPreviewModal();
+    }
+
     // ================= MODE 3 NARRATIVE MODAL =================
     let activeModalCardId = null;
     function openVoiceModalForCard(instanceId) {
@@ -1984,7 +2451,6 @@
         return;
       }
 
-      // Determine Category by X location in Mode 3 (4 zones)
       let category = '🟡 수정된 목소리';
       if (card.xPct < 25) category = '🟢 유지할 기준';
       else if (card.xPct < 50) category = '🟡 수정된 문장';
@@ -2006,27 +2472,49 @@
     // ================= EXPORT CANVAS TO PNG =================
     function exportCanvasToPng() {
       const canvasEl = document.getElementById('canvasContainer');
-      const btn = event.currentTarget;
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<span>⏳ 저장 중...</span>';
+      const btn = event?.currentTarget;
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) btn.innerHTML = '<span>⏳ 저장 중...</span>';
 
-      html2canvas(canvasEl, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#F8FAFC'
-      }).then(canvas => {
-        const link = document.createElement('a');
-        const now = new Date();
-        const timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
-        link.download = `Coaching_Canvas_Report_${timeStr}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        btn.innerHTML = originalText;
-      }).catch(err => {
-        console.error('Export error:', err);
-        alert('이미지 저장 중 오류가 발생했습니다.');
-        btn.innerHTML = originalText;
+      // 1. Prepare clean export: Add exporting-canvas class to resolve 3D flip mirror in html2canvas
+      document.body.classList.add('exporting-canvas');
+      
+      // Ensure all card-exporting containers have exact current flip class
+      Object.values(state.cardsOnCanvas).forEach(card => {
+        const el = document.getElementById(`flipContainer_${card.id}`);
+        if (el) {
+          if (card.isFlipped) {
+            el.classList.add('is-flipped');
+            el.classList.remove('is-not-flipped');
+          } else {
+            el.classList.add('is-not-flipped');
+            el.classList.remove('is-flipped');
+          }
+        }
       });
+
+      setTimeout(() => {
+        html2canvas(canvasEl, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#F8FAFC',
+          logging: false
+        }).then(canvas => {
+          const link = document.createElement('a');
+          const now = new Date();
+          const timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+          link.download = `Coaching_Canvas_Report_${timeStr}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          document.body.classList.remove('exporting-canvas');
+          if (btn) btn.innerHTML = originalText;
+        }).catch(err => {
+          console.error('Export error:', err);
+          document.body.classList.remove('exporting-canvas');
+          alert('이미지 저장 중 오류가 발생했습니다.');
+          if (btn) btn.innerHTML = originalText;
+        });
+      }, 50);
     }
   </script>
 </body>
